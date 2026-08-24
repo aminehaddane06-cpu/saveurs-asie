@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des Stocks - Les Saveurs d'Asie{% endblock %}
+
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-0">Gestion des Stocks & Ingrédients</h2>
+        <p class="text-muted mb-0">Contrôle des volumes en temps réel et alertes de réapprovisionnement.</p>
+    </div>
+</div>
+
+{% for label, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Ingrédient / Produit</th>
+                    <th>Quantité Actuelle</th>
+                    <th>Seuil Critique</th>
+                    <th>État</th>
+                    <th style="min-width: 200px;">Ajuster la quantité</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr class="{{ stock.status == 'Stock faible' ? 'table-warning' : (stock.status == 'Rupture' ? 'table-danger' : '') }}">
+                    <td class="fw-bold">{{ stock.name }}</td>
+                    <td><span class="fs-6 fw-bold">{{ stock.currentQuantity }}</span> {{ stock.unit }}</td>
+                    <td class="text-muted">{{ stock.minAlertThreshold }} {{ stock.unit }}</td>
+                    <td>
+                        {% if stock.status == 'En stock' %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> En stock</span>
+                        {% elseif stock.status == 'Stock faible' %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Stock faible</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Rupture</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{{ path('admin_stock_update', {id: stock.id}) }}" class="d-flex gap-2">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_stock_' ~ stock.id) }}">
+                            <input type="number" step="0.5" name="quantity" value="{{ stock.currentQuantity }}" class="form-control form-control-sm w-50" required>
+                            <button type="submit" class="btn btn-sm btn-primary">Mettre à jour</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

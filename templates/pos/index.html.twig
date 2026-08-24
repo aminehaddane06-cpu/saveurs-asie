@@ -1,0 +1,302 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Caisse & Prise de Commande - Les Saveurs d'Asie{% endblock %}
+
+{% block body %}
+<div class="row g-3">
+    <!-- COLONNE GAUCHE : SÉLECTION DES PLATS -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm p-3 mb-3">
+            <div class="d-flex gap-2 overflow-auto pb-2" id="category-filters">
+                <button class="btn btn-outline-dark btn-sm active filter-btn" data-category="all">Tous les plats</button>
+                {% for cat in categories %}
+                    <button class="btn btn-outline-dark btn-sm filter-btn" data-category="{{ cat.slug }}">{{ cat.name }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="row g-3" id="products-grid">
+            {% for p in products %}
+            <div class="col-sm-6 col-md-4 product-card" data-category="{{ p.category.slug }}">
+                <div class="card h-100 border-0 shadow-sm p-3 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-light text-dark border">{{ p.category.name }}</span>
+                            <span class="fw-bold text-asian-primary fs-5">{{ p.priceTtc|number_format(2, ',', ' ') }} €</span>
+                        </div>
+                        <h5 class="card-title fw-bold mb-1">{{ p.name }}</h5>
+                        <p class="card-text text-muted small">{{ p.description }}</p>
+                    </div>
+                    <button class="btn bg-asian-primary text-white w-100 mt-3 btn-add" 
+                            data-id="{{ p.id }}" 
+                            data-name="{{ p.name }}" 
+                            data-price="{{ p.priceTtc }}">
+                        <i class="bi bi-plus-lg me-1"></i> Ajouter
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- COLONNE DROITE : TICKET DE CAISSE / PANIER & ENCAISSEMENT -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 1rem;">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-receipt me-2"></i>Commande en cours</h5>
+                <button class="btn btn-outline-light btn-sm" id="btn-clear-cart" title="Vider le panier"><i class="bi bi-trash"></i></button>
+            </div>
+            <div class="card-body p-3">
+                <!-- Type de commande -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Mode de service</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="orderType" id="typePlace" value="SUR_PLACE" checked>
+                        <label class="btn btn-outline-secondary btn-sm" for="typePlace">Sur Place</label>
+
+                        <input type="radio" class="btn-check" name="orderType" id="typeEmporter" value="A_EMPORTER">
+                        <label class="btn btn-outline-secondary btn-sm" for="typeEmporter">À Emporter</label>
+
+                        <input type="radio" class="btn-check" name="orderType" id="typeLivraison" value="LIVRAISON">
+                        <label class="btn btn-outline-secondary btn-sm" for="typeLivraison">Livraison</label>
+                    </div>
+                </div>
+
+                <!-- Champ API Adresse pour Livraison -->
+                <div class="mb-3 d-none" id="address-block">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Adresse de livraison (API Gouv)</label>
+                    <input type="text" id="address-input" class="form-control form-control-sm" placeholder="Saisir l'adresse...">
+                    <div id="address-suggestions" class="list-group mt-1 shadow-sm position-absolute w-100" style="z-index: 1050; max-height: 180px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Lignes du panier -->
+                <div id="cart-items" class="border rounded p-2 mb-3 bg-light" style="min-height: 180px; max-height: 250px; overflow-y: auto;">
+                    <div class="text-center text-muted py-4 small" id="cart-empty-msg">Aucun article dans la commande</div>
+                </div>
+
+                <!-- Totaux -->
+                <div class="border-top pt-2">
+                    <div class="d-flex justify-content-between mb-1 small text-muted">
+                        <span>Total HT</span>
+                        <span id="cart-total-ht">0,00 €</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 small text-muted">
+                        <span>TVA estimée</span>
+                        <span id="cart-total-tva">0,00 €</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fs-5 fw-bold">Total TTC</span>
+                        <span class="fs-4 fw-bold text-asian-primary" id="cart-total-ttc">0,00 €</span>
+                    </div>
+                </div>
+
+                <!-- Encaissement -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Montant reçu (€)</label>
+                    <input type="number" step="0.5" id="amount-given" class="form-control" placeholder="0.00">
+                    <div class="d-flex justify-content-between mt-2 small">
+                        <span>Rendu monnaie :</span>
+                        <span class="fw-bold text-success" id="change-back">0,00 €</span>
+                    </div>
+                </div>
+
+                <button class="btn bg-asian-primary text-white w-100 py-2 fw-bold" id="btn-validate-order" disabled>
+                    <i class="bi bi-check2-circle me-1"></i> Valider & Encaisser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script interactif du POS -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let cart = [];
+    const vatRate = 0.10;
+
+    // Filtres Catégories
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const cat = btn.dataset.category;
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.style.display = (cat === 'all' || card.dataset.category === cat) ? 'block' : 'none';
+            });
+        });
+    });
+
+    // Ajout Produit au Panier
+    document.querySelectorAll('.btn-add').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.id);
+            const name = btn.dataset.name;
+            const price = parseFloat(btn.dataset.price);
+
+            const existing = cart.find(i => i.id === id);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ id, name, price, quantity: 1 });
+            }
+            renderCart();
+        });
+    });
+
+    function renderCart() {
+        const container = document.getElementById('cart-items');
+        if (cart.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-4 small" id="cart-empty-msg">Aucun article dans la commande</div>';
+            document.getElementById('cart-total-ht').textContent = '0,00 €';
+            document.getElementById('cart-total-tva').textContent = '0,00 €';
+            document.getElementById('cart-total-ttc').textContent = '0,00 €';
+            document.getElementById('btn-validate-order').disabled = true;
+            calcChange();
+            return;
+        }
+
+        let html = '';
+        let totalTtc = 0;
+
+        cart.forEach((item, index) => {
+            const lineTotal = item.price * item.quantity;
+            totalTtc += lineTotal;
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                    <div class="me-2 text-truncate" style="max-width: 140px;">
+                        <span class="fw-semibold small">${item.name}</span>
+                        <div class="small text-muted">${item.price.toFixed(2)} €</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 btn-qty-minus" data-index="${index}">-</button>
+                        <span class="fw-bold px-1 small">${item.quantity}</span>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 btn-qty-plus" data-index="${index}">+</button>
+                        <span class="fw-bold small ms-2">${lineTotal.toFixed(2)} €</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        const totalHt = totalTtc / (1 + vatRate);
+        const totalTva = totalTtc - totalHt;
+
+        document.getElementById('cart-total-ht').textContent = totalHt.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('cart-total-tva').textContent = totalTva.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('cart-total-ttc').textContent = totalTtc.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('btn-validate-order').disabled = false;
+
+        // Gestion Quantités
+        document.querySelectorAll('.btn-qty-plus').forEach(b => {
+            b.addEventListener('click', () => { cart[b.dataset.index].quantity++; renderCart(); });
+        });
+        document.querySelectorAll('.btn-qty-minus').forEach(b => {
+            b.addEventListener('click', () => {
+                const idx = b.dataset.index;
+                cart[idx].quantity--;
+                if (cart[idx].quantity <= 0) cart.splice(idx, 1);
+                renderCart();
+            });
+        });
+
+        calcChange();
+    }
+
+    // Calcul Rendu Monnaie
+    const amountInput = document.getElementById('amount-given');
+    amountInput.addEventListener('input', calcChange);
+
+    function calcChange() {
+        const totalTtc = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const given = parseFloat(amountInput.value) || 0;
+        const change = given - totalTtc;
+        const changeEl = document.getElementById('change-back');
+        if (change >= 0 && totalTtc > 0) {
+            changeEl.textContent = change.toFixed(2).replace('.', ',') + ' €';
+            changeEl.className = 'fw-bold text-success';
+        } else {
+            changeEl.textContent = '0,00 €';
+            changeEl.className = 'fw-bold text-muted';
+        }
+    }
+
+    // Vider panier
+    document.getElementById('btn-clear-cart').addEventListener('click', () => {
+        cart = [];
+        amountInput.value = '';
+        renderCart();
+    });
+
+    // Gestion Type de Commande & Affichage API Adresse
+    document.querySelectorAll('input[name="orderType"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const addressBlock = document.getElementById('address-block');
+            if (e.target.value === 'LIVRAISON') {
+                addressBlock.classList.remove('d-none');
+            } else {
+                addressBlock.classList.add('d-none');
+            }
+        });
+    });
+
+    // API ADRESSE GOUV (Recherche en direct)
+    const addressInput = document.getElementById('address-input');
+    const suggestionsBox = document.getElementById('address-suggestions');
+
+    addressInput.addEventListener('input', async () => {
+        const query = addressInput.value.trim();
+        if (query.length < 3) {
+            suggestionsBox.innerHTML = '';
+            return;
+        }
+        try {
+            const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=4`);
+            const data = await res.json();
+            suggestionsBox.innerHTML = '';
+            data.features.forEach(f => {
+                const item = document.createElement('a');
+                item.className = 'list-group-item list-group-item-action small py-2';
+                item.textContent = f.properties.label;
+                item.href = '#';
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    addressInput.value = f.properties.label;
+                    suggestionsBox.innerHTML = '';
+                });
+                suggestionsBox.appendChild(item);
+            });
+        } catch (err) {
+            console.error('Erreur API Adresse:', err);
+        }
+    });
+
+    // Validation et Envoi Commande
+    document.getElementById('btn-validate-order').addEventListener('click', async () => {
+        const orderType = document.querySelector('input[name="orderType"]:checked').value;
+        const address = addressInput.value;
+
+        const res = await fetch('{{ path("app_pos_checkout") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: orderType,
+                address: orderType === 'LIVRAISON' ? address : null,
+                items: cart
+            })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+            alert(`Commande validée avec succès !\nRéférence : ${result.reference}\nTotal : ${result.totalTtc}`);
+            cart = [];
+            amountInput.value = '';
+            addressInput.value = '';
+            renderCart();
+        } else {
+            alert('Erreur lors de la validation : ' + result.message);
+        }
+    });
+});
+</script>
+{% endblock %}

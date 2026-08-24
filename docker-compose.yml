@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 1. Base de données MySQL 8.0
+  database:
+    image: mysql:8.0
+    container_name: saveurs_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: les_saveurs_dasie
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  # 2. Serveur PHP-FPM avec Symfony
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saveurs_php
+    volumes:
+      - ./:/var/www/symfony:rw
+    environment:
+      DATABASE_URL: "mysql://user:password@database:3306/les_saveurs_dasie?serverVersion=8.0.32&charset=utf8mb4"
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  # 3. Serveur Web Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: saveurs_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/symfony:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge

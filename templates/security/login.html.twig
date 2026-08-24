@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion - Les Saveurs d'Asie{% endblock %}
+
+{% block body %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 75vh;">
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-asian-primary text-white text-center py-3">
+                <h4 class="mb-0 fw-bold">🥢 Les Saveurs d'Asie</h4>
+                <small class="text-light opacity-75">Système de gestion interne</small>
+            </div>
+            <div class="card-body p-4">
+                {% if error %}
+                    <div class="alert alert-danger py-2 small">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                {% endif %}
+
+                <form method="post" action="{{ path('app_login') }}">
+                    <div class="mb-3">
+                        <label for="inputEmail" class="form-label">Identifiant / Email</label>
+                        <input type="email" value="{{ last_username }}" name="_username" id="inputEmail" class="form-control" autocomplete="email" required autofocus placeholder="admin@saveursdasie.fr">
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputPassword" class="form-label">Mot de passe</label>
+                        <input type="password" name="_password" id="inputPassword" class="form-control" autocomplete="current-password" required placeholder="••••••••">
+                    </div>
+
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                    <button class="btn bg-asian-primary text-white w-100 py-2 mt-2 fw-semibold" type="submit">
+                        Se connecter
+                    </button>
+                </form>
+
+                <div class="mt-4 p-3 bg-light rounded small text-muted border">
+                    <strong>Comptes disponibles :</strong><br>
+                    • Gérant : <code>admin@saveursdasie.fr</code> / <code>admin123</code><br>
+                    • Équipier : <code>staff@saveursdasie.fr</code> / <code>staff123</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
