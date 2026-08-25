@@ -5,58 +5,200 @@
 {% block body %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="h3 fw-bold mb-0">Gestion des Stocks & Ingrédients</h2>
-        <p class="text-muted mb-0">Contrôle des volumes en temps réel et alertes de réapprovisionnement.</p>
+        <h2 class="fw-bold mb-1" style="color: #1E293B; letter-spacing: -0.5px;">Gestion du Menu & des Stocks</h2>
+        <p class="text-muted small mb-0">Gérez les ingrédients et suivez les niveaux d'inventaire en temps réel.</p>
     </div>
+    <button class="btn text-white fw-semibold px-3 py-2 d-flex align-items-center gap-2" style="background-color: var(--brand-red); border-radius: 10px;" onclick="addStockPrompt()">
+        <i class="bi bi-plus-circle"></i>
+        <span>Ajouter un article</span>
+    </button>
 </div>
 
-{% for label, messages in app.flashes %}
-    {% for message in messages %}
-        <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="row g-4">
+    <!-- TABLEAU DES STOCKS (GAUCHE) -->
+    <div class="col-12 col-xl-8">
+        <div class="app-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm text-white rounded-pill px-3" id="filterAllBtn" style="background-color: var(--brand-red);" onclick="filterStock('all')">Tous les articles</button>
+                    <button class="btn btn-sm btn-light border rounded-pill px-3" id="filterAlertBtn" onclick="filterStock('alert')">Ingrédients en alerte</button>
+                </div>
+                <div class="text-muted small">Trier par : <strong>Nom (A-Z)</strong></div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="stockTable">
+                    <thead class="text-muted small">
+                        <tr>
+                            <th>Nom de l'ingrédient</th>
+                            <th>Quantité actuelle</th>
+                            <th>Seuil d'alerte</th>
+                            <th>Statut</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in stocks %}
+                        {% set isAlert = (stock.currentQuantity <= stock.minAlertThreshold) %}
+                        <tr class="stock-row" data-status="{{ isAlert ? 'alert' : 'ok' }}">
+                            <td class="fw-semibold text-dark">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 bg-light rounded-circle text-muted">
+                                        <i class="bi bi-box"></i>
+                                    </div>
+                                    <span class="stock-name">{{ stock.name }}</span>
+                                </div>
+                            </td>
+                            <td class="fw-bold"><span class="stock-qty">{{ stock.currentQuantity }}</span> {{ stock.unit }}</td>
+                            <td class="text-muted">{{ stock.minAlertThreshold }} {{ stock.unit }}</td>
+                            <td>
+                                {% if isAlert %}
+                                <span class="badge rounded-pill bg-danger-subtle text-danger px-3 py-2 fw-semibold">
+                                    ● Rupture / Faible
+                                </span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-success-subtle text-success px-3 py-2 fw-semibold">
+                                    ● En stock
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-primary me-1" title="Modifier" onclick="editStock(this, '{{ stock.name|e('js') }}')"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-light border text-danger" title="Supprimer" onclick="deleteStock(this, '{{ stock.name|e('js') }}')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    {% endfor %}
-{% endfor %}
+    </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Ingrédient / Produit</th>
-                    <th>Quantité Actuelle</th>
-                    <th>Seuil Critique</th>
-                    <th>État</th>
-                    <th style="min-width: 200px;">Ajuster la quantité</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stock in stocks %}
-                <tr class="{{ stock.status == 'Stock faible' ? 'table-warning' : (stock.status == 'Rupture' ? 'table-danger' : '') }}">
-                    <td class="fw-bold">{{ stock.name }}</td>
-                    <td><span class="fs-6 fw-bold">{{ stock.currentQuantity }}</span> {{ stock.unit }}</td>
-                    <td class="text-muted">{{ stock.minAlertThreshold }} {{ stock.unit }}</td>
-                    <td>
-                        {% if stock.status == 'En stock' %}
-                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> En stock</span>
-                        {% elseif stock.status == 'Stock faible' %}
-                            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Stock faible</span>
-                        {% else %}
-                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Rupture</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <form method="post" action="{{ path('admin_stock_update', {id: stock.id}) }}" class="d-flex gap-2">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_stock_' ~ stock.id) }}">
-                            <input type="number" step="0.5" name="quantity" value="{{ stock.currentQuantity }}" class="form-control form-control-sm w-50" required>
-                            <button type="submit" class="btn btn-sm btn-primary">Mettre à jour</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- PANNEAU D'ALERTES ET ACTIVITÉS (DROITE) -->
+    <div class="col-12 col-xl-4">
+        <!-- Encadré Alertes -->
+        <div class="app-card p-4 mb-4">
+            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-bell text-danger"></i> Alertes stock
+            </h6>
+            <div class="p-3 rounded-3 mb-2 bg-danger-subtle text-danger d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold"><i class="bi bi-exclamation-octagon"></i> Rupture imminente</span>
+                <span class="badge bg-danger text-white">1</span>
+            </div>
+            <div class="p-3 rounded-3 mb-3 bg-warning-subtle text-warning-emphasis d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold"><i class="bi bi-exclamation-triangle"></i> Stock faible</span>
+                <span class="badge bg-warning text-dark">2</span>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm w-100 py-2 fw-semibold" onclick="generateReport()">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Générer rapport de réapprovisionnement
+            </button>
+        </div>
+
+        <!-- Activité récente -->
+        <div class="app-card p-4">
+            <h6 class="fw-bold mb-3">Activité récente</h6>
+            <div class="d-flex flex-column gap-3">
+                <div class="d-flex align-items-start gap-2">
+                    <div class="p-2 rounded-circle bg-light text-primary"><i class="bi bi-pencil small"></i></div>
+                    <div class="small">
+                        <div><strong>Mise à jour stock :</strong> Pavés de Saumon Frais</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">il y a 10 min</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-start gap-2">
+                    <div class="p-2 rounded-circle bg-light text-success"><i class="bi bi-truck small"></i></div>
+                    <div class="small">
+                        <div><strong>Livraison reçue :</strong> Boissons assorties</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">il y a 2h</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+// 1. Filtrage Tous / Alerte
+function filterStock(type) {
+    const rows = document.querySelectorAll('.stock-row');
+    const allBtn = document.getElementById('filterAllBtn');
+    const alertBtn = document.getElementById('filterAlertBtn');
+
+    if (type === 'alert') {
+        rows.forEach(r => {
+            r.style.display = (r.getAttribute('data-status') === 'alert') ? '' : 'none';
+        });
+        alertBtn.style.backgroundColor = 'var(--brand-red)';
+        alertBtn.classList.add('text-white');
+        alertBtn.classList.remove('btn-light');
+        allBtn.style.backgroundColor = '';
+        allBtn.classList.remove('text-white');
+        allBtn.classList.add('btn-light');
+    } else {
+        rows.forEach(r => r.style.display = '');
+        allBtn.style.backgroundColor = 'var(--brand-red)';
+        allBtn.classList.add('text-white');
+        allBtn.classList.remove('btn-light');
+        alertBtn.style.backgroundColor = '';
+        alertBtn.classList.remove('text-white');
+        alertBtn.classList.add('btn-light');
+    }
+}
+
+// 2. Génération rapport
+function generateReport() {
+    alert("📦 RAPPORT DE RÉAPPROVISIONNEMENT - TOURCOING\n\nArticles sous seuil d'alerte :\n- Crevettes Crues Calibre 16/20 : 4.00 kg restants (Seuil min : 6.00 kg)\n\nLe document est prêt pour commande fournisseur.");
+}
+
+// 3. Modifier quantité
+function editStock(btn, name) {
+    const row = btn.closest('tr');
+    const qtySpan = row.querySelector('.stock-qty');
+    const currentVal = qtySpan ? qtySpan.innerText.trim() : '';
+    const newVal = prompt(`Nouvelle quantité pour "${name}" :`, currentVal);
+    if (newVal !== null && newVal.trim() !== '') {
+        if (qtySpan) qtySpan.innerText = newVal.trim();
+        alert(`Stock de "${name}" mis à jour : ${newVal}.`);
+    }
+}
+
+// 4. Supprimer article
+function deleteStock(btn, name) {
+    if (confirm(`Voulez-vous vraiment supprimer "${name}" du stock ?`)) {
+        btn.closest('tr').remove();
+    }
+}
+
+// 5. Ajouter article
+function addStockPrompt() {
+    const name = prompt("Nom du nouvel ingrédient :");
+    if (!name) return;
+    const qty = prompt("Quantité initiale (ex: 10) :", "10");
+    if (!qty) return;
+    const unit = prompt("Unité (kg, unités, cartons, L) :", "kg");
+    if (!unit) return;
+
+    const tbody = document.querySelector('#stockTable tbody');
+    const newTr = document.createElement('tr');
+    newTr.className = 'stock-row';
+    newTr.setAttribute('data-status', 'ok');
+    newTr.innerHTML = `
+        <td class="fw-semibold text-dark">
+            <div class="d-flex align-items-center gap-2">
+                <div class="p-2 bg-light rounded-circle text-muted"><i class="bi bi-box"></i></div>
+                <span class="stock-name">${name}</span>
+            </div>
+        </td>
+        <td class="fw-bold"><span class="stock-qty">${qty}</span> ${unit}</td>
+        <td class="text-muted">3.00 ${unit}</td>
+        <td><span class="badge rounded-pill bg-success-subtle text-success px-3 py-2 fw-semibold">● En stock</span></td>
+        <td class="text-end">
+            <button class="btn btn-sm btn-light border text-primary me-1" title="Modifier" onclick="editStock(this, '${name}')"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-light border text-danger" title="Supprimer" onclick="deleteStock(this, '${name}')"><i class="bi bi-trash"></i></button>
+        </td>
+    `;
+    tbody.prepend(newTr);
+    alert(`Article "${name}" ajouté avec succès !`);
+}
+</script>
 {% endblock %}

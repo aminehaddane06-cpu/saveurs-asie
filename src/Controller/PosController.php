@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 class PosController extends AbstractController
 {
-    #[Route('', name: 'app_pos_index', methods: ['GET'])]
+    #[Route('', name: 'app_pos', methods: ['GET'])]
     public function index(EntityManagerInterface $em): Response
     {
         $categories = $em->getRepository(Category::class)->findAll();

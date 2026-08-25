@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les Saveurs d'Asie - Tourcoing | Commande en ligne</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --brand-red: #A3151D;
+            --brand-red-hover: #860F16;
+            --bg-body: #F8FAFC;
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-body); color: #1E293B; }
+        .hero-banner {
+            background: linear-gradient(135deg, #A3151D 0%, #4A0509 100%);
+            color: white;
+            padding: 2.5rem 1.5rem;
+            border-radius: 0 0 24px 24px;
+        }
+        .app-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .app-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        }
+        .dish-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+        .address-suggestions-box {
+            position: absolute;
+            width: 100%;
+            z-index: 1050;
+            max-height: 180px;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top py-2 px-3 px-md-5">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <span class="fs-3">🥢</span>
+                <div>
+                    <div class="fw-bold fs-5 mb-0" style="color: var(--brand-red); line-height: 1;">Les Saveurs d'Asie</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Tourcoing • 15 Rue Saint-Jacques</small>
+                </div>
+            </a>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill d-none d-md-inline-block">
+                    ● Ouvert (12h-15h • 18h-23h)
+                </span>
+
+                {% if app.user %}
+                    <a href="{{ path('app_logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                        <i class="bi bi-box-arrow-right"></i> Déconnexion ({{ app.user.firstName }})
+                    </a>
+                {% else %}
+                    <a href="{{ path('app_login') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-person-circle fs-6"></i>
+                        <span>Espace Pro / Connexion</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- BANNIÈRE ACCUEIL -->
+    <div class="hero-banner mb-4 text-center">
+        <div class="container">
+            <h1 class="fw-bold mb-2">Nos Spécialités Asiatiques</h1>
+            <p class="opacity-75 mb-0">Spécialités Japonaises & Chinoises faites maison à Tourcoing. À emporter ou en livraison directe.</p>
+        </div>
+    </div>
+
+    <!-- CONTENU PRINCIPAL -->
+    <div class="container-fluid px-3 px-md-5 pb-5">
+        <div class="row g-4">
+            <!-- LISTE DES PLATS -->
+            <div class="col-12 col-lg-8">
+                <!-- BARRE DES CATÉGORIES -->
+                <div class="d-flex gap-2 overflow-auto pb-3 mb-3">
+                    <button class="btn btn-sm text-white fw-semibold rounded-pill px-3" style="background-color: var(--brand-red);" onclick="filterCat('all', this)">Tous</button>
+                    {% for cat in categories %}
+                        <button class="btn btn-sm btn-white bg-white border fw-semibold rounded-pill px-3 text-nowrap" onclick="filterCat('{{ cat.id }}', this)">{{ cat.name }}</button>
+                    {% endfor %}
+                </div>
+
+                <!-- GRILLE DES PRODUITS -->
+                <div class="row g-3">
+                    {% for product in products %}
+                    <div class="col-12 col-sm-6 col-md-4 product-card" data-cat="{{ product.category.id }}">
+                        <div class="app-card h-100 d-flex flex-column justify-content-between">
+                            {% if product.imageUrl %}
+                                <img src="{{ product.imageUrl }}" alt="{{ product.name }}" class="dish-img" loading="lazy">
+                            {% else %}
+                                <div class="bg-light dish-img d-flex align-items-center justify-content-center text-muted fs-3">🥢</div>
+                            {% endif %}
+                            
+                            <div class="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+                                <div>
+                                    <span class="badge bg-light text-secondary mb-1 small">{{ product.category.name }}</span>
+                                    <h6 class="fw-bold mb-1">{{ product.name }}</h6>
+                                    <p class="text-muted small mb-2" style="font-size: 0.8rem; line-height: 1.3;">{{ product.description }}</p>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                                    <span class="fw-bold fs-6" style="color: var(--brand-red);">{{ product.priceTtc|number_format(2, ',', ' ') }} €</span>
+                                    <button class="btn btn-sm text-white rounded-pill px-3" style="background-color: var(--brand-red);" onclick="addClientCart('{{ product.name|e('js') }}', {{ product.priceTtc }})">
+                                        + Ajouter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- PANIER CLIENT -->
+            <div class="col-12 col-lg-4">
+                <div class="app-card p-4 sticky-top" style="top: 85px;">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-bag-check me-2"></i>Mon Panier</span>
+                        <span class="badge bg-light text-dark" id="clientCartCount">0 article</span>
+                    </h5>
+
+                    <!-- SÉLECTION DU MODE -->
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">Mode de retrait :</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="clientMode" id="modeEmporter" checked onchange="toggleClientAddress(false)">
+                            <label class="btn btn-outline-secondary btn-sm" for="modeEmporter">À emporter</label>
+                            
+                            <input type="radio" class="btn-check" name="clientMode" id="modeLivraison" onchange="toggleClientAddress(true)">
+                            <label class="btn btn-outline-secondary btn-sm" for="modeLivraison">Livraison à domicile</label>
+                        </div>
+                    </div>
+
+                    <!-- BLOC LIVRAISON -->
+                    <div id="clientAddressBox" class="p-3 mb-3 bg-light rounded-3 border" style="display: none;">
+                        <div class="mb-2 position-relative">
+                            <label class="small fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> Adresse de livraison :
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="clientAddressInput" placeholder="Tapez votre adresse (ex: 120 rue de Tourcoing...)" autocomplete="off" oninput="searchAddressGouv(this.value)">
+                            <div id="addressSuggestions" class="list-group address-suggestions-box bg-white border" style="display: none;"></div>
+                        </div>
+
+                        <div>
+                            <label class="small fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                                <i class="bi bi-telephone-fill text-primary"></i> Téléphone client :
+                            </label>
+                            <input type="tel" class="form-control form-control-sm" id="clientPhoneInput" placeholder="Ex: 06 12 34 56 78">
+                        </div>
+                    </div>
+
+                    <!-- LISTE DES ARTICLES -->
+                    <div id="clientCartList" class="mb-3" style="max-height: 200px; overflow-y: auto;">
+                        <p class="text-muted small text-center py-4">Votre panier est actuellement vide.</p>
+                    </div>
+
+                    <!-- MODULE POURBOIRE -->
+                    <div class="border-top pt-2 mb-3">
+                        <label class="small fw-semibold text-muted d-flex align-items-center gap-1 mb-1">
+                            <i class="bi bi-heart-fill text-danger"></i> Soutenir l'équipe / Pourboire :
+                        </label>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-light border flex-fill py-1 tip-client-btn active-tip" style="background-color: var(--brand-red); color: white;" onclick="setClientTip(0, this)">0 €</button>
+                            <button type="button" class="btn btn-sm btn-light border flex-fill py-1 tip-client-btn" onclick="setClientTip(1, this)">+1 €</button>
+                            <button type="button" class="btn btn-sm btn-light border flex-fill py-1 tip-client-btn" onclick="setClientTip(2, this)">+2 €</button>
+                            <button type="button" class="btn btn-sm btn-light border flex-fill py-1 tip-client-btn" onclick="setClientTip(5, this)">+5 €</button>
+                        </div>
+                    </div>
+
+                    <!-- TOTAUX -->
+                    <div class="border-top pt-2 mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Sous-total plats</span>
+                            <span id="clientSubtotalDisplay">0,00 €</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-1" id="tipClientRow" style="display: none;">
+                            <span>Pourboire</span>
+                            <span class="text-danger fw-semibold" id="clientTipDisplay">0,00 €</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold fs-5 border-top pt-2 mt-1">
+                            <span>Total à payer</span>
+                            <span style="color: var(--brand-red);" id="clientTotalDisplay">0,00 €</span>
+                        </div>
+                    </div>
+
+                    <button class="btn text-white w-100 py-2 fw-semibold rounded-3" style="background-color: var(--brand-red);" onclick="validateClientOrder()">
+                        Valider et Payer la commande
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS INTERACTIFS -->
+    <script>
+    let clientCart = [];
+    let clientTip = 0;
+
+    function toggleClientAddress(show) {
+        document.getElementById('clientAddressBox').style.display = show ? 'block' : 'none';
+        if (!show) {
+            document.getElementById('addressSuggestions').style.display = 'none';
+        }
+    }
+
+    function setClientTip(amount, btn) {
+        clientTip = amount;
+        document.querySelectorAll('.tip-client-btn').forEach(b => {
+            b.style.backgroundColor = '';
+            b.style.color = '';
+            b.classList.remove('text-white');
+            b.classList.add('btn-light');
+        });
+        btn.style.backgroundColor = 'var(--brand-red)';
+        btn.style.color = 'white';
+        btn.classList.add('text-white');
+        btn.classList.remove('btn-light');
+
+        if (amount > 0) {
+            document.getElementById('tipClientRow').style.display = 'flex';
+            document.getElementById('clientTipDisplay').innerText = amount.toFixed(2).replace('.', ',') + ' €';
+        } else {
+            document.getElementById('tipClientRow').style.display = 'none';
+        }
+        renderClientCart();
+    }
+
+    function searchAddressGouv(query) {
+        const container = document.getElementById('addressSuggestions');
+        if (!query || query.trim().length < 3) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                if (data.features && data.features.length > 0) {
+                    data.features.forEach(feature => {
+                        const item = document.createElement('button');
+                        item.type = 'button';
+                        item.className = 'list-group-item list-group-item-action py-2 px-3 small border-bottom';
+                        item.innerHTML = `<strong>${feature.properties.name}</strong>, <span class="text-muted">${feature.properties.postcode} ${feature.properties.city}</span>`;
+                        item.onclick = function() {
+                            document.getElementById('clientAddressInput').value = feature.properties.label;
+                            container.style.display = 'none';
+                        };
+                        container.appendChild(item);
+                    });
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            })
+            .catch(err => console.error("Erreur API Adresse:", err));
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#clientAddressBox')) {
+            const container = document.getElementById('addressSuggestions');
+            if (container) container.style.display = 'none';
+        }
+    });
+
+    function filterCat(catId, btn) {
+        document.querySelectorAll('.btn').forEach(b => {
+            if (b.onclick && b.onclick.toString().includes('filterCat')) {
+                b.classList.remove('text-white');
+                b.style.backgroundColor = '';
+                b.classList.add('bg-white', 'text-dark');
+            }
+        });
+        btn.classList.add('text-white');
+        btn.style.backgroundColor = 'var(--brand-red)';
+
+        document.querySelectorAll('.product-card').forEach(card => {
+            if (catId === 'all' || card.dataset.cat === catId) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function addClientCart(name, price) {
+        const exist = clientCart.find(i => i.name === name);
+        if (exist) {
+            exist.qty += 1;
+        } else {
+            clientCart.push({ name, price, qty: 1 });
+        }
+        renderClientCart();
+    }
+
+    function updateClientQty(name, delta) {
+        const item = clientCart.find(i => i.name === name);
+        if (!item) return;
+        item.qty += delta;
+        if (item.qty <= 0) {
+            clientCart = clientCart.filter(i => i.name !== name);
+        }
+        renderClientCart();
+    }
+
+    function renderClientCart() {
+        const box = document.getElementById('clientCartList');
+        if (clientCart.length === 0) {
+            box.innerHTML = '<p class="text-muted small text-center py-4">Votre panier est actuellement vide.</p>';
+            document.getElementById('clientSubtotalDisplay').innerText = '0,00 €';
+            document.getElementById('clientTotalDisplay').innerText = (0 + clientTip).toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('clientCartCount').innerText = '0 article';
+            return;
+        }
+        let subtotal = 0;
+        let count = 0;
+        let html = '';
+        clientCart.forEach(item => {
+            const lineTotal = item.price * item.qty;
+            subtotal += lineTotal;
+            count += item.qty;
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded-3 small">
+                    <div class="me-2 text-truncate">
+                        <div class="fw-semibold text-truncate">${item.name}</div>
+                        <div class="text-muted">${item.price.toFixed(2)} € x ${item.qty}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-sm btn-white bg-white border p-0 px-2 fw-bold" onclick="updateClientQty('${item.name.replace(/'/g, "\\'")}', -1)">-</button>
+                        <span class="fw-bold px-1">${item.qty}</span>
+                        <button class="btn btn-sm btn-white bg-white border p-0 px-2 fw-bold" onclick="updateClientQty('${item.name.replace(/'/g, "\\'")}', 1)">+</button>
+                        <span class="fw-bold ms-2" style="min-width: 50px; text-align: right;">${lineTotal.toFixed(2)} €</span>
+                    </div>
+                </div>
+            `;
+        });
+        box.innerHTML = html;
+        document.getElementById('clientSubtotalDisplay').innerText = subtotal.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('clientTotalDisplay').innerText = (subtotal + clientTip).toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('clientCartCount').innerText = `${count} article${count > 1 ? 's' : ''}`;
+    }
+
+    function validateClientOrder() {
+        if (clientCart.length === 0) {
+            alert("Votre panier est vide. Veuillez ajouter des plats.");
+            return;
+        }
+
+        const isLiv = document.getElementById('modeLivraison').checked;
+        if (isLiv) {
+            const address = document.getElementById('clientAddressInput').value.trim();
+            const phone = document.getElementById('clientPhoneInput').value.trim();
+            if (!address) {
+                alert("Veuillez sélectionner une adresse de livraison valide.");
+                return;
+            }
+            if (!phone) {
+                alert("Veuillez renseigner votre numéro de téléphone pour le livreur.");
+                return;
+            }
+        }
+
+        let msg = `🥢 Merci pour votre commande chez Les Saveurs d'Asie Tourcoing !\n`;
+        if (clientTip > 0) {
+            msg += `Pourboire inclus : ${clientTip.toFixed(2)} € (Merci pour l'équipe ! ❤️)\n`;
+        }
+        msg += `Montant total : ${document.getElementById('clientTotalDisplay').innerText}\nVotre commande a été transmise en cuisine.`;
+
+        alert(msg);
+        clientCart = [];
+        clientTip = 0;
+        setClientTip(0, document.querySelector('.tip-client-btn'));
+        renderClientCart();
+    }
+    </script>
+</body>
+</html>
