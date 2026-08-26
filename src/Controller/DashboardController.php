@@ -55,7 +55,7 @@ class DashboardController extends AbstractController
             $dailyRevenue += (float)$order->getTotalTtc();
         }
 
-        return $this->render('admin/dashboard/index.html.twig', [
+        return $this->render('dashboard/index.html.twig', [
             'totalProducts' => $totalProducts,
             'totalOrders' => $totalOrders,
             'dailyRevenue' => $dailyRevenue,

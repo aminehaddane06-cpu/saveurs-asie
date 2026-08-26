@@ -5,6 +5,7 @@ services:
   database:
     image: mysql:8.0
     container_name: saveurs_db
+    command: --default-authentication-plugin=mysql_native_password --skip-name-resolve
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: les_saveurs_dasie

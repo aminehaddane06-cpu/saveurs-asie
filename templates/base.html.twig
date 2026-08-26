@@ -140,6 +140,7 @@
             }
         }
     </style>
+    {% block stylesheets %}{% endblock %}
 </head>
 <body>
 
@@ -151,7 +152,7 @@
                 <div class="logo-icon">🥢</div>
                 <div>
                     <h6 class="fw-bold mb-0" style="letter-spacing: -0.3px;">Saveurs d'Asie</h6>
-                    <small class="text-muted" style="font-size: 0.72rem;">Tourcoing • POS v1.0</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">Tourcoing - POS v1.0</small>
                 </div>
             </a>
 
@@ -213,7 +214,7 @@
         <header class="top-navbar">
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-semibold">
-                    ● Service Actif • Tourcoing
+                    Service Actif - Tourcoing
                 </span>
             </div>
             <div class="d-flex align-items-center gap-3">
@@ -230,9 +231,54 @@
         <main class="page-content">
             {% block body %}{% endblock %}
         </main>
+
+        <!-- FOOTER DISCRET DE GESTION AVEC LIEN CGV -->
+        <footer class="bg-white border-top py-3 px-4 mt-auto text-muted small no-print">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <div>
+                    <strong>Les Saveurs d'Asie</strong> - Interface d'administration
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="#" class="text-decoration-none text-muted" data-bs-toggle="modal" data-bs-target="#cgvModal">Conditions Générales de Vente (CGV)</a>
+                    <span>&copy; {{ "now"|date("Y") }} Tous droits réservés</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODALE CONDITIONS GÉNÉRALES DE VENTE (CGV) -->
+    <div class="modal fade" id="cgvModal" tabindex="-1" aria-labelledby="cgvModalAdminLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="cgvModalAdminLabel">🥢 Conditions Générales de Vente (CGV)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body small text-secondary">
+                    <h6 class="fw-bold text-dark">1. Présentation de l'établissement</h6>
+                    <p>Le restaurant <strong>Les Saveurs d'Asie</strong> est situé au 15 Rue Saint-Jacques, 59200 Tourcoing. Il propose la vente de plats cuisinés sur place, à emporter et en livraison directe.</p>
+
+                    <h6 class="fw-bold text-dark">2. Commandes et Disponibilité</h6>
+                    <p>Les commandes s'effectuent en ligne via la plateforme ou directement au comptoir. Les produits sont préparés à la commande sous réserve de disponibilité des stocks d'ingrédients frais en cuisine.</p>
+
+                    <h6 class="fw-bold text-dark">3. Prix et Modalités de Paiement</h6>
+                    <p>Les prix indiqués sont en euros Toutes Taxes Comprises (TTC). Le règlement s'effectue en caisse ou à la livraison en espèces ou carte bancaire.</p>
+
+                    <h6 class="fw-bold text-dark">4. Livraison et Retrait</h6>
+                    <p>Le retrait à emporter est disponible sous 15 à 25 minutes. Les livraisons sont assurées sur le secteur de Tourcoing, Roubaix et leurs environs selon les conditions de circulation.</p>
+
+                    <h6 class="fw-bold text-dark">5. Données personnelles</h6>
+                    <p>Les informations collectées (numéro de téléphone, adresse) sont strictement utilisées pour le traitement et la livraison de votre commande.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block javascripts %}{% endblock %}
 </body>
 </html>
